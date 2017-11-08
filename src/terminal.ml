@@ -11,14 +11,14 @@ let flush () =
 
 let show_highlighted_line row s =
   begin
-    assert (Curses.mvaddstr row 2 s);
+    assert (Curses.mvaddstr row 1 ("*" ^ s));
     (* Printf.printf "\x1b[%d;0H\x1b[7m%s\x1b[0m" row s; *)
   end
 
 
 let show_line row s =
   begin
-    assert (Curses.mvaddstr row 1 ("*" ^ s));
+    assert (Curses.mvaddstr row 2 s);
     (* Printf.printf "\x1b[%d;0H%s" row s; *)
   end
 

@@ -16,7 +16,7 @@ let lst =
 
 let rec loop rowhl =
   Terminal.show_list rowhl lst;
-  print_endline "waiting input...";
+  assert (Curses.mvaddstr 10 2 "waiting input...");
   let c = Curses.getch () in
   match Char.chr c with
   | 'n' ->
@@ -42,7 +42,7 @@ let () =
       exit 1;
     end
   else
-    let w = Curses.initscr () in
+    let _ = Curses.initscr () in
     begin
       assert (Curses.cbreak ());
       assert (Curses.noecho ());
