@@ -1,3 +1,4 @@
+PKG curses
 S ./
 B ../_build/src/
 S ../external/otfm/src/

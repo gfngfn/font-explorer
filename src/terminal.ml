@@ -1,20 +1,25 @@
 
 let flush () =
   begin
+    Curses.erase ();
+(*
     print_string "\x1b[2J";
     print_string "\x1b[0;0H";
+*)
   end
 
 
 let show_highlighted_line row s =
   begin
-    Printf.printf "\x1b[%d;0H\x1b[7m%s\x1b[0m" row s;
+    assert (Curses.mvaddstr row 2 s);
+    (* Printf.printf "\x1b[%d;0H\x1b[7m%s\x1b[0m" row s; *)
   end
 
 
 let show_line row s =
   begin
-    Printf.printf "\x1b[%d;0H%s" row s;
+    assert (Curses.mvaddstr row 1 ("*" ^ s));
+    (* Printf.printf "\x1b[%d;0H%s" row s; *)
   end
 
 
@@ -31,4 +36,5 @@ let show_list rowhl lst =
   begin
     flush ();
     aux 1 lst;
+    assert (Curses.refresh ());
   end
