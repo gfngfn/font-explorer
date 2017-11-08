@@ -14,24 +14,32 @@ let lst =
   ["The"; "quick"; "brown"; "fox"; "jumps"]
 
 
-let rec loop rowhl =
+let rec loop errcopt rowhl =
   Terminal.show_list rowhl lst;
   assert (Curses.mvaddstr 10 2 "waiting input...");
+  let () =
+    match errcopt with
+    | None    -> ()
+    | Some(c) -> assert (Curses.mvaddstr 11 2 (Printf.sprintf "[%d]" c))
+  in
   let c = Curses.getch () in
   match Char.chr c with
   | 'n' ->
       let rowhlnew =
         if rowhl >= List.length lst then rowhl else rowhl + 1
       in
-        loop rowhlnew
+        loop None rowhlnew
 
   | 'p' ->
       let rowhlnew =
         if rowhl <= 1 then rowhl else rowhl - 1
       in
-        loop rowhlnew
+        loop None rowhlnew
 
-  | _ -> ()
+  | 'q' -> ()
+
+  | _ ->
+        loop (Some(c)) rowhl
 
 
 let () =
@@ -46,6 +54,6 @@ let () =
     begin
       assert (Curses.cbreak ());
       assert (Curses.noecho ());
-      loop 1;
+      loop None 1;
       Curses.endwin ();
     end
