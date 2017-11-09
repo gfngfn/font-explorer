@@ -16,11 +16,11 @@ let lst =
 
 let rec loop errcopt rowhl =
   Terminal.show_list rowhl lst;
-  assert (Curses.mvaddstr 10 2 "waiting input...");
+  Terminal.print_status "waiting input...";
   let () =
     match errcopt with
     | None    -> ()
-    | Some(c) -> assert (Curses.mvaddstr 11 2 (Printf.sprintf "[%d]" c))
+    | Some(c) -> Terminal.print_error (Printf.sprintf "[%d]" c)
   in
   let c = Curses.getch () in
   match Char.chr c with
@@ -52,6 +52,15 @@ let () =
   else
     begin
       Terminal.initialize ();
-      loop None 1;
-      Terminal.terminate ();
+      try
+        begin
+          loop None 1;
+          Terminal.terminate ();
+        end
+      with
+      | Assert_failure(_, _, _) ->
+          begin
+            Terminal.terminate ();
+            print_endline "Internal error has occured.";
+          end
     end
