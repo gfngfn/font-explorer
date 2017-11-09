@@ -1,26 +1,32 @@
 
-let flush () =
+
+let highlight_color = 1
+
+
+let initialize () =
+  let _ = Curses.initscr () in
   begin
-    Curses.erase ();
-(*
-    print_string "\x1b[2J";
-    print_string "\x1b[0;0H";
-*)
+    assert (Curses.cbreak ());
+    assert (Curses.noecho ());
+    assert (Curses.start_color ());
+    assert (Curses.init_pair highlight_color Curses.Color.white Curses.Color.red);
   end
+
+
+let terminate () =
+  Curses.endwin ()
 
 
 let show_highlighted_line row s =
   begin
+    Curses.attron (Curses.A.color_pair highlight_color);
     assert (Curses.mvaddstr row 1 ("*" ^ s));
-    (* Printf.printf "\x1b[%d;0H\x1b[7m%s\x1b[0m" row s; *)
+    Curses.attroff (Curses.A.color_pair highlight_color);
   end
 
 
 let show_line row s =
-  begin
-    assert (Curses.mvaddstr row 2 s);
-    (* Printf.printf "\x1b[%d;0H%s" row s; *)
-  end
+  assert (Curses.mvaddstr row 2 s)
 
 
 let show_list rowhl lst =
@@ -34,7 +40,8 @@ let show_list rowhl lst =
         end
   in
   begin
-    flush ();
+    Curses.erase ();
+    show_line 0 "---- ---- ---- ----";
     aux 1 lst;
     assert (Curses.refresh ());
   end

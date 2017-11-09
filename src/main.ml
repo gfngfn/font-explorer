@@ -50,10 +50,8 @@ let () =
       exit 1;
     end
   else
-    let _ = Curses.initscr () in
     begin
-      assert (Curses.cbreak ());
-      assert (Curses.noecho ());
+      Terminal.initialize ();
       loop None 1;
-      Curses.endwin ();
+      Terminal.terminate ();
     end
