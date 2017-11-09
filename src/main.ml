@@ -1,20 +1,41 @@
 
 open Result
 
-exception Bug
-exception OtherError of string
+type error =
+  | OtfmError   of Otfm.error
+  | Bug
+  | Message     of string
+  | SystemError of string
 
+let ( >>= ) (type a) (type b) (type c) (x : (a, c) result) (f : a -> (b, c) result) : (b, c) result =
+  match x with
+  | Ok(v)    -> f v
+  | Error(e) -> Error(e)
 
-let err msg = raise (OtherError(msg))
+let ( >>=@ ) x f =
+  match x with
+  | Ok(v)    -> f v
+  | Error(e) -> Error(OtfmError(e))
+
+let return v = Ok(v)
+
+let err e = Error(e)
+
+let report_result (r : (unit, error) result) : unit =
+  match r with
+  | Ok(())   -> ()
+  | Error(e) ->
+      match e with
+      | OtfmError(oe)    -> Otfm.pp_error Format.std_formatter oe
+      | Bug              -> print_endline "bug"
+      | Message(msg)     -> print_endline msg
+      | SystemError(msg) -> print_endline msg
 
 
 let arg_spec_list = []
 
 let font_file_loaded_ref = ref false
-(*
-let lst =
-  ["The"; "quick"; "brown"; "fox"; "jumps"]
-*)
+
 
 let rec loop errcopt rowhl lst =
   Terminal.show_list rowhl lst;
@@ -44,7 +65,7 @@ let rec loop errcopt rowhl lst =
         loop (Some(c)) rowhl lst
 
 
-let string_of_file fontfile =
+let string_of_file fontfile : (string, error) result =
   try
     let ic = open_in_bin fontfile in
     let bufsize = 65536 in
@@ -58,53 +79,40 @@ let string_of_file fontfile =
         else
           Buffer.add_substring b (Bytes.unsafe_to_string s) 0 c
       done;
-      raise (Bug)
+      err Bug
     with
-    | Exit              -> close_in ic; Buffer.contents b
-    | Failure(_)        -> close_in ic; err (Printf.sprintf "%s: too large input" fontfile)
-    | Sys_error(errmsg) -> close_in ic; err errmsg
+    | Exit              -> close_in ic; return (Buffer.contents b)
+    | Failure(_)        -> close_in ic; err (Message(Printf.sprintf "%s: too large input" fontfile))
+    | Sys_error(errmsg) -> close_in ic; err (SystemError(errmsg))
   with
-  | Sys_error(errmsg) -> err errmsg
+  | Sys_error(errmsg) -> err (Message(errmsg))
 
 
 let handle_input fontfile =
   font_file_loaded_ref := true;
-  try
-    let s = string_of_file fontfile in
-    let dcdr = Otfm.decoder (`String(s)) in
-      match Otfm.table_list dcdr with
-      | Error(_) ->
-          begin
-            print_endline "font format broken.";
-            ()
-          end
-
-      | Ok(taglst) ->
-      begin
-        Terminal.initialize ();
-        try
-          begin
-            loop None 1 (List.map Otfm.Tag.to_bytes taglst);
-            Terminal.terminate ();
-          end
-        with
-        | Assert_failure(_, _, _) ->
+  let res =
+    begin
+      string_of_file fontfile >>= fun s ->
+      let dcdr = Otfm.decoder (`String(s)) in
+      Otfm.table_list dcdr >>=@ fun taglst ->
+        begin
+          Terminal.initialize ();
+          try
             begin
+              loop None 1 (List.map Otfm.Tag.to_bytes taglst);
               Terminal.terminate ();
-              print_endline "Internal error has happened.";
+              return ()
             end
-      end
-    with
-    | Bug ->
-        begin
-          print_endline "Internal error has happened.";
+          with
+          | Assert_failure(_, _, _) ->
+              begin
+                Terminal.terminate ();
+                err (Message("internal error"))
+              end
         end
-
-    | OtherError(errmsg) ->
-        begin
-          Terminal.terminate ();
-          print_endline ("Error: " ^ errmsg);
-        end
+    end
+  in
+    report_result res
 
 
 let () =
