@@ -1,4 +1,4 @@
-PKG curses
+PKG curses uutf result
 S ./
 B ../_build/src/
 S ../external/otfm/src/
