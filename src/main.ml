@@ -110,13 +110,13 @@ let rec loop errcopt rowhl tr =
   match Char.chr c with
   | 'n' ->
       let rowhlnew =
-        if rowhl >= List.length tr then rowhl else rowhl + 1
+        if rowhl >= (List.length tr) - 1 then rowhl else rowhl + 1
       in
         loop None rowhlnew tr
 
   | 'p' ->
       let rowhlnew =
-        if rowhl <= 1 then rowhl else rowhl - 1
+        if rowhl <= 0 then rowhl else rowhl - 1
       in
         loop None rowhlnew tr
 
@@ -138,7 +138,8 @@ and enter_tree rowhl tr =
   | head :: tail ->
       if rowhl <= 0 then
         match head with
-        | Element(_, Evaled(trc)) -> loop None 1 trc
+        | Element(_, Evaled([]))  -> ()
+        | Element(_, Evaled(trc)) -> loop None 0 trc
         | Element(_, ToEval(_))   -> ()
       else
         enter_tree (rowhl - 1) tail
@@ -152,7 +153,7 @@ let handle_input fontfile =
       Terminal.initialize ();
       try
         begin
-          loop None 1 tr;
+          loop None 0 tr;
           Terminal.terminate ();
           return ()
         end

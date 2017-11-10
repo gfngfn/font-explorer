@@ -40,13 +40,13 @@ let print_error msg =
 let show_highlighted_line row s =
   begin
     Curses.attron (Curses.A.color_pair highlight_color_id);
-    assert (Curses.mvaddstr row 1 ("*" ^ s));
+    assert (Curses.mvaddstr (row + 1) 1 ("*" ^ s));
     Curses.attroff (Curses.A.color_pair highlight_color_id);
   end
 
 
 let show_line row s =
-  assert (Curses.mvaddstr row 2 s)
+  assert (Curses.mvaddstr (row + 1) 2 s)
 
 
 let show_tree rowhl lst =
@@ -61,7 +61,7 @@ let show_tree rowhl lst =
   in
   begin
     Curses.erase ();
-    show_line 0 "---- ---- ---- ----";
-    aux 1 lst;
+    assert(Curses.mvaddstr 0 2 "---- ---- ---- ----");
+    aux 0 lst;
     assert (Curses.refresh ());
   end
