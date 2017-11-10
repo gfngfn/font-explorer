@@ -11,8 +11,15 @@ let highlight_bg_color   = Curses.Color.red
 let xmaxref = ref 0
 let ymaxref = ref 0
 
+let yshift = 1
+
 let ybottom i = !ymaxref - i
 
+let displayed_row_max () =  ybottom 5
+
+let row_center () =
+  displayed_row_max () / 2 + yshift
+  
 
 let initialize () =
   let win = Curses.initscr () in
@@ -39,9 +46,6 @@ let print_error msg =
   assert (Curses.mvaddstr (ybottom 1) 2 msg)
 
 
-let yshift = 1
-
-
 let show_highlighted_line row s =
   begin
     Curses.attron (Curses.A.color_pair highlight_color_id);
@@ -55,12 +59,11 @@ let show_line row s =
 
 
 let show_tree rowhl lst =
-  let nummax = ybottom 5 in
   let numhidden =
-    if rowhl < (nummax / 2) then
+    if rowhl < row_center () then
       0
     else
-      rowhl - (nummax / 2)
+      rowhl - row_center ()
   in
   let rec aux row lst =
     match lst with
@@ -68,7 +71,7 @@ let show_tree rowhl lst =
     | (Element(s, _)) :: tail ->
         begin
           begin
-            if (row < numhidden || (row - numhidden) + yshift > nummax) then () else
+            if (row < numhidden || (row - numhidden) + yshift > displayed_row_max ()) then () else
               (if row = rowhl then show_highlighted_line else show_line) (row - numhidden) s;
           end;
           aux (row + 1) tail
@@ -78,18 +81,18 @@ let show_tree rowhl lst =
     Curses.erase ();
     let topstr =
       if numhidden = 0 then
-        "-------(top)-------"
+        "-------------------"
       else
-        ".......( ^ )......."
+        "- - - -  ^  - - - -"
     in
     assert (Curses.mvaddstr 0 2 topstr);
     aux 0 lst;
     let bottomstr =
-      if List.length lst - numhidden > nummax then
-        ".......( V )......."
+      if List.length lst - numhidden >= displayed_row_max () then
+        "- - - -  V  - - - -"
       else
-        "-------(bot)-------"
+        "-------------------"
     in
-    assert (Curses.mvaddstr nummax 2 bottomstr);
+    assert (Curses.mvaddstr (displayed_row_max ()) 2 bottomstr);
     assert (Curses.refresh ());
   end
