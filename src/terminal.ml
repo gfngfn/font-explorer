@@ -1,4 +1,6 @@
 
+open Tree
+
 
 let highlight_color_id = 1
   (* -- any integer >= 1 -- *)
@@ -47,11 +49,11 @@ let show_line row s =
   assert (Curses.mvaddstr row 2 s)
 
 
-let show_list rowhl lst =
+let show_tree rowhl lst =
   let rec aux row lst =
     match lst with
     | [] -> ()
-    | s :: tail ->
+    | (Element(s, _)) :: tail ->
         begin
           (if row = rowhl then show_highlighted_line else show_line) row s;
           aux (row + 1) tail
