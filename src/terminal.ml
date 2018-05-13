@@ -70,7 +70,7 @@ let show_tree rowhl lst =
     | [] -> ()
     | (Element(s, ch)) :: tail ->
         let s =
-          match ch with
+          match !ch with
           | Evaled([]) -> s
           | Evaled(_)  -> s ^ " >>"
           | ToEval(_)  -> s ^ " >>"

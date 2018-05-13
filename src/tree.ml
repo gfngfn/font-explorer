@@ -38,7 +38,7 @@ type tree =
   | ToEval of (unit -> (elem list, error) result)
 
 and elem =
-  | Element of string * tree
+  | Element of string * tree ref
 
 
 exception ErrorJump of error

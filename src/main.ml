@@ -27,7 +27,7 @@ let string_of_file fontfile : (string, error) result =
 
 
 let leaf s =
-  Element(s, Evaled([]))
+  Element(s, ref (Evaled([])))
 
 
 let head_content dcdr () =
@@ -45,6 +45,19 @@ let head_content dcdr () =
   ]
 
 
+let hhea_content dcdr () =
+  Otfm.hhea dcdr >>= fun h ->
+  return [
+    leaf (Printf.sprintf "ascender           : %d" h.Otfm.hhea_ascender);
+    leaf (Printf.sprintf "descender          : %d" h.Otfm.hhea_descender);
+    leaf (Printf.sprintf "lineGap            : %d" h.Otfm.hhea_line_gap);
+    leaf (Printf.sprintf "advanceWidthMax    : %d" h.Otfm.hhea_advance_width_max);
+    leaf (Printf.sprintf "minLeftSideBearing : %d" h.Otfm.hhea_min_left_side_bearing);
+    leaf (Printf.sprintf "minRightSideBearing: %d" h.Otfm.hhea_min_right_side_bearing);
+    leaf (Printf.sprintf "xMaxExtent         : %d" h.Otfm.hhea_xmax_extent);
+  ]
+
+
 let table_list dcdr =
   Otfm.table_list dcdr >>= fun taglst ->
   let tagstrlst = taglst |> List.map Otfm.Tag.to_bytes in
@@ -53,9 +66,10 @@ let table_list dcdr =
       let children =
         match tagstr with
         | "head" -> ToEval(head_content dcdr)
+        | "hhea" -> ToEval(hhea_content dcdr)
         | _      -> Evaled([])
       in
-      Element(tagstr, children)
+      Element(tagstr, ref children)
     )
   in
   return tagtrlst
@@ -75,8 +89,8 @@ let tree_of_font_file fontfile =
               return (nameopt, lst)
             ) |> List.map (function
               | Error(e)              -> raise (ErrorJump(e))
-              | Ok((None, lst))       -> Element("<no-postscript-name>", Evaled(lst))
-              | Ok((Some(name), lst)) -> Element(name, Evaled(lst))
+              | Ok((None, lst))       -> Element("<no-postscript-name>", ref (Evaled(lst)))
+              | Ok((Some(name), lst)) -> Element(name, ref (Evaled(lst)))
             )
           in
           return tr
@@ -91,7 +105,7 @@ let tree_of_font_file fontfile =
 
 let rec loop errcopt rowhl tr =
   Terminal.show_tree rowhl tr;
-  Terminal.print_status "waiting input...";
+  Terminal.print_status "[p] up  [n] down  [e] enter  [q] exit";
   let () =
     match errcopt with
     | None    -> ()
@@ -126,17 +140,18 @@ and enter_tree rowhl tr =
   | [] ->
       return ()
 
-  | head :: tail ->
+  | Element(_, ch) :: tail ->
       if rowhl <= 0 then
-        match head with
-        | Element(_, Evaled([])) ->
+        match !ch with
+        | Evaled([]) ->
             return ()
 
-        | Element(_, Evaled(trc)) ->
+        | Evaled(trc) ->
             loop None 0 trc
 
-        | Element(_, ToEval(f)) ->
+        | ToEval(f) ->
             f () >>= fun trc ->
+            ch := Evaled(trc);
             loop None 0 trc
       else
         enter_tree (rowhl - 1) tail
