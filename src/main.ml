@@ -58,28 +58,28 @@ let tree_of_font_file fontfile =
   string_of_file fontfile >>= fun s ->
   Otfm.decoder (`String(s)) >>= function
   | Otfm.TrueTypeCollection(ttc) ->
-      let tr =
-        ttc |> List.map (fun ttcelem ->
-          Otfm.decoder_of_ttc_element ttcelem >>= fun dcdr ->
-          Otfm.postscript_name dcdr >>= fun nameopt ->
-          table_list dcdr >>= fun lst ->
-          return (nameopt, lst)
-        ) |> List.map (function
-          | Error(_)              -> Element("<error>", Evaled([]))
-          | Ok((None, lst))       -> Element("<none>", Evaled([]))
-          | Ok((Some(name), lst)) -> Element(name, Evaled(lst))
-        )
-      in
-      return tr
+      begin
+        try
+          let tr =
+            ttc |> List.map (fun ttcelem ->
+              Otfm.decoder_of_ttc_element ttcelem >>= fun dcdr ->
+              Otfm.postscript_name dcdr >>= fun nameopt ->
+              table_list dcdr >>= fun lst ->
+              return (nameopt, lst)
+            ) |> List.map (function
+              | Error(e)              -> raise (ErrorJump(e))
+              | Ok((None, lst))       -> Element("<no-postscript-name>", Evaled(lst))
+              | Ok((Some(name), lst)) -> Element(name, Evaled(lst))
+            )
+          in
+          return tr
+        with
+        | ErrorJump(e) -> err e
+      end
 
   | Otfm.SingleDecoder(dcdr) ->
       table_list dcdr >>= fun lst ->
       return lst
-
-
-let arg_spec_list = []
-
-let font_file_loaded_ref = ref false
 
 
 let rec loop errcopt rowhl tr =
@@ -135,8 +135,7 @@ and enter_tree rowhl tr =
         enter_tree (rowhl - 1) tail
 
 
-let handle_input fontfile =
-  font_file_loaded_ref := true;
+let main fontfile =
   let res =
     tree_of_font_file fontfile >>= fun tr ->
     begin
@@ -153,14 +152,19 @@ let handle_input fontfile =
           end
     end
   in
-    report_result res
+  report_result res
+
+
+let arg_spec_list = []
+
+let srcinref = ref None
+
+let specify_input src =
+  srcinref := Some(src)
 
 
 let () =
-  Arg.parse arg_spec_list handle_input "";
-  if not !font_file_loaded_ref then
-    begin
-      prerr_endline "No font file specified.";
-      exit 1;
-    end
-  else ()
+  Arg.parse arg_spec_list specify_input "";
+  match !srcinref with
+  | None        -> prerr_endline "No font file specified."; exit 1
+  | Some(srcin) -> main srcin

@@ -39,3 +39,6 @@ type tree =
 
 and elem =
   | Element of string * tree
+
+
+exception ErrorJump of error

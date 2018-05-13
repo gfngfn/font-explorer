@@ -19,7 +19,7 @@ let displayed_row_max () =  ybottom 5
 
 let row_center () =
   displayed_row_max () / 2 + yshift
-  
+
 
 let initialize () =
   let win = Curses.initscr () in
@@ -68,7 +68,13 @@ let show_tree rowhl lst =
   let rec aux row lst =
     match lst with
     | [] -> ()
-    | (Element(s, _)) :: tail ->
+    | (Element(s, ch)) :: tail ->
+        let s =
+          match ch with
+          | Evaled([]) -> s
+          | Evaled(_)  -> s ^ " >>"
+          | ToEval(_)  -> s ^ " >>"
+        in
         begin
           begin
             if (row < numhidden || (row - numhidden) + yshift > displayed_row_max ()) then () else

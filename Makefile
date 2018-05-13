@@ -7,7 +7,7 @@ all:
 	mv main.native fontex
 
 install:
-	sudo install fontex $(PREFIX)
+	install fontex $(PREFIX)
 
 clean:
 	ocamlbuild $(OCBFLAGS) -clean
