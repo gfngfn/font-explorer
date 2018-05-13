@@ -31,10 +31,17 @@ let leaf s =
 
 
 let head_content dcdr () =
-  Otfm.head dcdr >>= fun head ->
+  Otfm.head dcdr >>= fun h ->
   return [
-    leaf (Printf.sprintf "flags: %04X" head.Otfm.head_flags);
-    leaf (Printf.sprintf "unitsPerEm: %d" head.Otfm.head_units_per_em);
+    leaf (Printf.sprintf "flags       : %04X" h.Otfm.head_flags);
+    leaf (Printf.sprintf "fontRevision: %d" (Int32.to_int h.Otfm.head_font_revision));
+    leaf (Printf.sprintf "unitsPerEm  : %d" h.Otfm.head_units_per_em);
+    leaf (Printf.sprintf "created     : %s" (Int64.to_string (Int64.of_float h.Otfm.head_created)));
+    leaf (Printf.sprintf "modified    : %s" (Int64.to_string (Int64.of_float h.Otfm.head_modified)));
+    leaf (Printf.sprintf "xMin        : %d" h.Otfm.head_xmin);
+    leaf (Printf.sprintf "yMin        : %d" h.Otfm.head_ymin);
+    leaf (Printf.sprintf "xMax        : %d" h.Otfm.head_xmax);
+    leaf (Printf.sprintf "yMax        : %d" h.Otfm.head_ymax);
   ]
 
 
