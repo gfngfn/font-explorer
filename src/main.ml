@@ -34,10 +34,10 @@ let head_content dcdr () =
   Otfm.head dcdr >>= fun h ->
   return [
     leaf (Printf.sprintf "flags       : %04X" h.Otfm.head_flags);
-    leaf (Printf.sprintf "fontRevision: %d" (Int32.to_int h.Otfm.head_font_revision));
+    leaf (Printf.sprintf "fontRevision: %08LX" (Otfm.WideInt.to_int64 h.Otfm.head_font_revision));
     leaf (Printf.sprintf "unitsPerEm  : %d" h.Otfm.head_units_per_em);
-    leaf (Printf.sprintf "created     : %s" (Int64.to_string (Int64.of_float h.Otfm.head_created)));
-    leaf (Printf.sprintf "modified    : %s" (Int64.to_string (Int64.of_float h.Otfm.head_modified)));
+    leaf (Printf.sprintf "created     : %08LX" (Otfm.WideInt.to_int64 h.Otfm.head_created));
+    leaf (Printf.sprintf "modified    : %08LX" (Otfm.WideInt.to_int64 h.Otfm.head_modified));
     leaf (Printf.sprintf "xMin        : %d" h.Otfm.head_xmin);
     leaf (Printf.sprintf "yMin        : %d" h.Otfm.head_ymin);
     leaf (Printf.sprintf "xMax        : %d" h.Otfm.head_xmax);
@@ -58,6 +58,58 @@ let hhea_content dcdr () =
   ]
 
 
+let gsub_content_feature langsys () =
+  Otfm.gsub_feature langsys >>= fun (_, featurelst) ->
+  let lst = featurelst |> List.map (fun feature -> leaf (Otfm.gsub_feature_tag feature)) in
+  return lst
+
+
+let gsub_content_langsys script () =
+  Otfm.gsub_langsys script >>= fun (langsys, langsyslst) ->
+  let lst =
+    (langsys :: langsyslst) |> List.map (fun langsys ->
+      Element(Otfm.gsub_langsys_tag langsys, ref (ToEval(gsub_content_feature langsys)))
+    )
+  in
+  return lst
+
+
+let gsub_content_script dcdr () =
+  Otfm.gsub_script dcdr >>= fun scriptlst ->
+  let lst =
+    scriptlst |> List.map (fun script ->
+      Element(Otfm.gsub_script_tag script, ref (ToEval(gsub_content_langsys script)))
+    )
+  in
+  return lst
+
+
+let gpos_content_feature langsys () =
+  Otfm.gpos_feature langsys >>= fun (_, featurelst) ->
+  let lst = featurelst |> List.map (fun feature -> leaf (Otfm.gpos_feature_tag feature)) in
+  return lst
+
+
+let gpos_content_langsys script () =
+  Otfm.gpos_langsys script >>= fun (langsys, langsyslst) ->
+  let lst =
+    (langsys :: langsyslst) |> List.map (fun langsys ->
+      Element(Otfm.gpos_langsys_tag langsys, ref (ToEval(gpos_content_feature langsys)))
+    )
+  in
+  return lst
+
+
+let gpos_content_script dcdr () =
+  Otfm.gpos_script dcdr >>= fun scriptlst ->
+  let lst =
+    scriptlst |> List.map (fun script ->
+      Element(Otfm.gpos_script_tag script, ref (ToEval(gpos_content_langsys script)))
+    )
+  in
+  return lst
+
+
 let table_list dcdr =
   Otfm.table_list dcdr >>= fun taglst ->
   let tagstrlst = taglst |> List.map Otfm.Tag.to_bytes in
@@ -67,6 +119,8 @@ let table_list dcdr =
         match tagstr with
         | "head" -> ToEval(head_content dcdr)
         | "hhea" -> ToEval(hhea_content dcdr)
+        | "GSUB" -> ToEval(gsub_content_script dcdr)
+        | "GPOS" -> ToEval(gpos_content_script dcdr)
         | _      -> Evaled([])
       in
       Element(tagstr, ref children)
